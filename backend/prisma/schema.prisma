@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  orders    Order[]
+  products  Product[]
+}
+
+model Customer {
+  id          String   @id @default(uuid())
+  phoneNumber String   @unique // Para WhatsApp
+  name        String
+  address     String?
+  createdAt   DateTime @default(now())
+  
+  orders      Order[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  category    String
+  price       Float
+  image       String?
+  available   Boolean  @default(true)
+  syncIfood   Boolean  @default(false)
+  syncWpp     Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  orderItems  OrderItem[]
+}
+
+model Order {
+  id            String   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  
+  orderNumber   String   // EX: #1024
+  platform      String   // IFOOD, WHATSAPP, MANUAL
+  status        String   // PENDING, PREPARING, READY, DELIVERING, DELIVERED, CANCELLED
+  
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  customerName  String   // Salvar o nome mesmo sem id de cliente
+  
+  total         Float
+  paymentMethod String   // PAID, MONEY, PIX, DEBIT, CREDIT
+  serviceType   String   // EAT_IN, TAKEAWAY, DELIVERY
+  
+  tableNumber   String?
+  address       String?
+  notes         String?
+  
+  items         OrderItem[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model OrderItem {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id])
+  
+  name      String   // Salvar nome atual do item (caso o produto seja apagado)
+  quantity  Int
+  price     Float    // Preço cobrado no momento do pedido
+}
